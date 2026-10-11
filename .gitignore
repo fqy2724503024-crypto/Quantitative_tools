@@ -1,0 +1,24 @@
+# 开发/测试中间产物
+_dev/vr_*.html
+_dev/*.png
+_dev/pg*/
+_dev/pc*/
+_dev/u[0-9]*
+_dev/rs[0-9]*
+_dev/rg_*
+_dev/R_*
+_dev/pon
+_dev/pf*
+_dev/pp*
+_dev/uf*
+_dev/_chk*.js
+_dev/*_dom.html
+_dev/*_rg.html
+_dev/*_R.html
+
+# 交付目录里的重复副本（与根目录 index.html 内容一致）
+交付/量能雷达.html
+交付/site/
+
+.DS_Store
+Thumbs.db
