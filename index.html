@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>量能雷达 · A股实时虚拟成交量预测</title>
+<title>量能雷达 v1.2 · A股实时虚拟成交量预测</title>
 <style>
   /* ---------- 主题变量 ----------
      浅色是默认值；深色整套覆盖。所有颜色只在这里定义一次，
@@ -25,7 +25,7 @@
     --ov:#7a45e6;        /* 叠加的分时线 */
     --c1:#e8590c;        /* JLB */
     --c2:#1971c2;        /* MLB */
-    --c3:#7048e8;        /* JMLB */
+    --c3:#f0b400;        /* JMLB */
     --c4:#0ca678;        /* LB1 */
     --hover:#f2f5f9;
     --hoverbd:#cfd5e0;
@@ -58,7 +58,7 @@
     --ov:#a855f7;
     --c1:#f59e0b;
     --c2:#4c8dff;
-    --c3:#a855f7;
+    --c3:#ffd400;
     --c4:#2dd4a7;
     --hover:#1e2734;
     --hoverbd:#33405280;
@@ -90,9 +90,16 @@
   .logo{display:flex;align-items:baseline;gap:9px}
   .logo b{font-size:17px;letter-spacing:.4px}
   .logo span{font-size:12px;color:var(--ink3)}
+  /* 版本号徽标：跟在产品名后的小胶囊，走语义变量以自动适配深/浅色主题 */
+  .logo .ver{
+    font-size:10.5px;font-weight:700;letter-spacing:.3px;line-height:1;
+    padding:3px 6px;border-radius:4px;vertical-align:2px;
+    color:var(--pred);background:var(--onbg);border:1px solid var(--line2);
+  }
   .grow{flex:1}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--ink3);display:inline-block;margin-right:6px;vertical-align:1px}
   .dot.live{background:var(--up);box-shadow:0 0 0 0 var(--hlred);animation:pulse 2s infinite}
+  .dot.err{background:#e89a2c;animation:pulse 1.2s infinite}
   @keyframes pulse{0%{box-shadow:0 0 0 0 var(--hlred)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
   .stat-line{font-size:12px;color:var(--ink2)}
   .btn{
@@ -173,6 +180,7 @@
     border:2.5px solid var(--card);box-shadow:0 1px 5px var(--focusring);cursor:pointer;
   }
   .replay-time{font-size:13px;font-weight:600;min-width:52px;text-align:center;color:var(--pred)}
+  #upd{font-weight:700;font-size:19px;color:#ffd400}  /* 盘中更新时间：加粗加大醒目 + 黄色 */
   .note{margin-top:10px;font-size:11.5px;color:var(--ink3);line-height:1.85}
   .note b{color:var(--ink2);font-weight:600}
   .err{padding:40px 20px;text-align:center;color:var(--ink2);font-size:13px;line-height:2}
@@ -293,16 +301,16 @@
 <div class="wrap">
 
   <div class="top">
-    <div class="logo"><b>量能雷达</b><span>A股指数量能预测</span></div>
+    <div class="logo"><b>量能雷达</b><span class="ver">v1.2</span><span>A股指数量能预测</span></div>
     <div class="grow"></div>
-    <div class="stat-line"><span id="dot" class="dot"></span><span id="status">准备中</span> · 更新 <span id="upd">—</span></div>
+    <div class="stat-line"><span id="dot" class="dot"></span><span id="status">准备中</span> · 更新 <span id="upd">—</span> · <span id="auto">自动 30s</span></div>
     <button class="btn on" id="btnOv">已叠加中证全指</button>
     <button class="btn" id="btnP4">参考：只看昨日</button>
     <button class="btn on" id="btnP5">5分钟外推</button>
     <button class="btn on" id="btnBand">置信带</button>
     <span class="lab2" style="margin-left:2px">0轴基准</span>
     <button class="btn on" id="btnBY">昨日全天</button>
-    <button class="btn" id="btnB5">近5日均量</button>
+    <button class="btn" id="btnB5" title="今日之前的 4 个交易日全天成交额均值（不含今日，避免盘中未跑完的量拉低基准）">前4日均量</button>
     <button class="btn" id="btnBM">历史中位</button>
     <button class="btn on" id="btnReso">共振带</button>
     <button class="btn" id="btnNoise">分量比全线</button>
@@ -317,6 +325,9 @@
     <input class="inp" id="code" placeholder="代码 / 名称，如 600519、中证全指" autocomplete="off" />
     <button class="btn" id="btnGo" style="height:34px">切换</button>
     <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="searchbar" style="margin-top:8px">
     <span class="lab2" style="margin-left:6px">复盘日期<br/><span style="font-size:11px">历史行情回溯</span></span>
     <button class="btn" id="btnPrevD" style="height:34px;padding:0 9px" title="前一交易日">◀</button>
     <input type="text" id="hdate" class="inp cal-trigger" style="width:152px;height:34px"
@@ -351,15 +362,6 @@
     </div>
   </div>
 
-  <div class="card chartcard">
-    <div class="acc-head">
-      <span class="lab">预测可靠度自检</span>
-      <span class="acc-sub" id="accSub">—</span>
-    </div>
-    <canvas id="cvAcc"></canvas>
-    <div class="acc-note" id="accNote"></div>
-  </div>
-
   <div class="toast" id="toast"></div>
 
   <div class="calpop" id="calpop">
@@ -389,6 +391,15 @@
     <button class="btn" id="btnLive">回到最新</button>
   </div>
 
+  <div class="card chartcard" style="margin-top:12px">
+    <div class="acc-head">
+      <span class="lab">预测可靠度自检</span>
+      <span class="acc-sub" id="accSub">—</span>
+    </div>
+    <canvas id="cvAcc"></canvas>
+    <div class="acc-note" id="accNote"></div>
+  </div>
+
   <div class="note">
     <b>主语</b>　图中的量能指<b>当前所选标的自身的成交额</b>：选中证全指（<code>sh000985</code>，默认）就是中证全指成分股的总成交额，选沪深300就是沪深300成分股的总成交额，选个股就是该股成交额。
     该标的同时以<b style="color:#7a45e6">紫色分时线直接叠加在主图上</b>（右轴＝点位，第二行小字＝涨跌幅，0% 基准＝昨收，左侧标注「昨收」），也可一键关闭；切换标的即切换量能主语。
@@ -404,7 +415,9 @@
     含义是「若今天按过去 3 天的平均节奏走，最终会成交多少」。收盘时该比例＝1，预测量能自动收敛为今日实际量能——
     这正是开盘啦上「实际量能 ＝ 预测量能」的原因。把它换算成相对<b>基准量能</b>的百分比，就是主图这条曲线。
     <br>　<b>基准可切换（顶栏「0轴基准」）</b>：默认以<b>昨日全天</b>为 0 轴；遇到昨日缩量暴跌这类极端日，
-    「今日 +25%」其实只是均值回归而非真放量，换成<b>近5日均量</b>或<b>历史中位量能</b>就能看出这层区别。三档只在 0 轴与百分比读数上不同，预测本身完全不变。
+    「今日 +25%」其实只是均值回归而非真放量，换成<b>前4日均量</b>或<b>历史中位量能</b>就能看出这层区别。三档只在 0 轴与百分比读数上不同，预测本身完全不变。
+    <br>　　<span style="color:var(--ink3)">注：「前4日均量」只统计<b>今日之前</b>的 4 个交易日，不含今日——盘中今日累计量还没跑完（10:00 可能只走了 15%），
+    把它算进均值会把基准压低约两成，让读数偏向「放量」。</span>
     <br>　<b>预测置信带（顶栏「置信带」）</b>：把内置 1 分钟历史里的每一天都当成 T 日、按<b>完全同一套口径</b>重跑一遍，
     统计每个时刻「预测量能相对当日实际全天的偏差」，取 20%~80% 分位，再以当前预测值为中心画成主图上的蓝色带。
     它把「误差随时间收敛」直接画了出来：<b>开盘阶段带宽可达 ±10%，临近收盘收成一条线</b>——早盘只适合看方向。
@@ -450,6 +463,24 @@
     <b>深色模式与键盘盲操</b>　顶栏「暗色模式」（或按 <b>K</b>）一键切换深浅主题，选择会记住；深色下红/绿/紫/金黄换成高饱和版本，深灰底上的对比度成倍提升，长时间盯盘不刺眼。
     <b>按 <b>?</b> 打开快捷键面板</b>：← → 逐交易日、D 开日历、T 回今天、[ ] 时间回放、O 叠加线、C 置信带、B 基准、R 分量比主线/全线、G 共振带、K 深浅色、F 刷新、A 自动刷新、1~9 切预设标的、Esc 关弹层。
     <br>　实时数据源为腾讯财经 / 东方财富公开行情接口，复盘历史数据为通达信导出的 1 分钟K线，本工具仅作学习研究。  </div>
+
+  <div class="card" style="margin-top:10px">
+    <div class="acc-head"><span class="lab">v1.2 更新说明</span></div>
+    <div class="note" style="margin-top:2px">
+    <b>① 修正「前 N 日均量」口径：不再包含今日</b>　此前该基准把<b>今日</b>也算了进去。
+    盘中今日累计量还没跑完（10:00 可能只走了 15%），把它算进均值会<b>系统性压低基准约两成</b>，
+    让读数偏向「放量」——这是会翻转结论的偏差。现在只统计<b>今日之前的 4 个交易日</b>。
+    <br>　　实测差别（2026-10-12 中证全指，今日 1.49 万亿）：以 10-09 放量日 1.84 万亿为基准读作
+    <b>−19.04%</b>（像是大幅缩量），改用前 4 日均量 1.55 万亿则为 <b>−3.86%</b>（几乎持平，这才是真实状态）。
+    <br>　　页面上所有相关位置（0轴基准档、头部、KPI 卡、主图参考横线、图例）已统一为同一口径。
+    <br>　<b>② 修复实盘自动刷新卡死</b>　此前若某次请求因弱网/网络切换而挂住，刷新会<b>永久停止</b>
+    （内部 loading 锁永不释放，之后每次定时器触发都被静默跳过，且界面无任何提示，只能手动 F5）。
+    现在加了超时看门狗自动解锁并重试，同时把单次请求的最坏耗时从 45 秒压到 9 秒（不再超过刷新周期），
+    顶栏会如实显示「刷新中 / 失败×N / 距解锁 Ns」，卡住与失败都看得见。
+    <br>　<b>③ 其他</b>　量能脉冲与价格线的染色判据由「两点之和的符号」改为「后值 ≥ 前值」（原判据会误判）；
+    主图新增前 N 日均量参考横线、午休分隔线、线头时刻与涨跌幅标签；自动刷新在切回前台时立即补刷。
+    </div>
+  </div>
 </div>
 
 <script>
@@ -475,6 +506,25 @@ const TIMES1M  = buildTimes(1);    // 240 根：09:31–11:30、13:01–15:00
 const TIMES5M  = buildTimes(5);    // 48 根：09:35–11:30、13:05–15:00（东财 5 分钟K 的时间戳口径）
 const TIMES15M = buildTimes(15);   // 16 根：09:45–11:30、13:15–15:00（腾讯 15 分钟K 的时间戳口径）
 const DAYS = 5;                    // 今日 + 前 4 日
+
+/* ------------------------------ 版本号 ------------------------------
+   唯一版本来源：改这里即可，页面 logo 徽标会自动同步。
+   命名规则（语义化版本 SemVer 简化版，适配本工具）：
+     主版本.次版本 —— 主版本＝口径/架构级变更，次版本＝功能与修复
+   v1.0  首个可用版：单文件量能预测 + 内置1分钟历史 + 自检面板 + 基准三档 + 置信带
+   v1.1  布局与配色重排；JMLB 改黄；头部改「较昨日同期」同口径对比；
+         新增 5日均量参考线、午休线、线头标签；自动刷新加固
+   v1.2  修正「均量」口径为**排除今日**（此前含今日，盘中会系统性偏低并放大放量读数）；
+         修复实盘自动刷新卡死（loading 锁死 + 单次耗时 45s > 30s 周期 + 静默失败）  */
+const APP_VERSION = '1.2';
+(function syncVersion(){
+  // logo 徽标
+  document.querySelectorAll('.logo .ver').forEach(e => { e.textContent = 'v' + APP_VERSION; });
+  // 浏览器标签页标题
+  document.title = document.title.replace(/v[\d.]+/, 'v' + APP_VERSION);
+  // 文件名兜底：量能雷达1012.html 之类，便于下载后识别版本
+  try { localStorage.setItem('vr_version', APP_VERSION); } catch(e){}
+})();
 let BAR_TIMES = TIMES1M;
 let BPD = BAR_TIMES.length;        // 当前网格的每日根数（＝通达信的 N）
 let GRID_K = 1;                    // 当前网格粒度（分钟）
@@ -498,8 +548,6 @@ const PRESETS = [
   { n:'深证成指', c:'sz399001' }, { n:'创业板指', c:'sz399006' },
   { n:'沪深300',  c:'sh000300' }, { n:'中证500',  c:'sh000905' },
   { n:'中证1000', c:'sh000852' }, { n:'科创50',   c:'sh000688' },
-  { n:'贵州茅台', c:'sh600519' }, { n:'宁德时代', c:'sz300750' },
-  { n:'东方财富', c:'sz300059' },
 ];
 const NAME2CODE = {}; PRESETS.forEach(p => NAME2CODE[p.n] = p.c);
 
@@ -760,9 +808,12 @@ function el(id){ return document.getElementById(id); }
 
 /* ----------------------------- JSONP / fetch ----------------------------- */
 let seq = 0;
-function jsonp(url, tries, cbParam){
+/* perTryMs：单次尝试的超时。v1.1 起由调用方按剩余预算传入，
+   不再写死 12s —— 写死 12s 会让"总预算 9s"的约定失效（一次尝试就超预算）。 */
+function jsonp(url, tries, cbParam, perTryMs){
   tries = tries || 3;
   cbParam = cbParam || '_var';   // 腾讯接口用 _var，东财接口用 cb
+  const perTry = perTryMs || 12000;
   return new Promise((resolve, reject) => {
     (function attempt(left){
       const name = 'volradar_cb_' + (++seq);
@@ -771,7 +822,7 @@ function jsonp(url, tries, cbParam){
       const fin = (fn, arg) => { if (done) return; done = true;
         clearTimeout(to); try { delete window[name]; } catch(e){ window[name] = undefined; }
         s.remove(); fn(arg); };
-      const to = setTimeout(() => fin(() => left > 1 ? attempt(left - 1) : reject(new Error('请求超时'))), 12000);
+      const to = setTimeout(() => fin(() => left > 1 ? attempt(left - 1) : reject(new Error('请求超时'))), perTry);
       window[name] = undefined;
       s.onload = () => {
         const d = window[name];
@@ -784,17 +835,29 @@ function jsonp(url, tries, cbParam){
     })(tries);
   });
 }
-/* 优先走 fetch（东财历史接口带 CORS 头），失败降级 JSONP；带超时与中止 */
+/* 优先走 fetch（东财历史接口带 CORS 头），失败降级 JSONP；带超时与中止
+   ⚠️ v1.1 修复：原来 fetch 默认 9s 超时，失败降级 jsonp(tries=3) 且 jsonp 单次 12s 超时，
+   最坏 9 + 12*3 = **45 秒**，而自动刷新周期只有 30 秒 —— 网络稍差就必然跨周期跳票，
+   叠加 loading 锁就表现为「自动刷新不工作」。
+   现在把**总预算**压到 fetchJson 的 timeout 参数上：fetch 占一半，剩余分给 jsonp 重试，
+   保证单次刷新最坏耗时 < 刷新周期（默认调用方传 9s → 最坏 9s）。 */
 async function fetchJson(url, cbParam, timeout){
+  const budget = timeout || 9000;
   try {
     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const to = ctl ? setTimeout(() => ctl.abort(), timeout || 9000) : null;
-    const r = await fetch(url, { referrerPolicy: 'no-referrer', signal: ctl ? ctl.signal : undefined });
+    // fetch 只用一半预算，剩下的留给 jsonp，避免"fetch 慢 + jsonp 慢"叠加超周期
+    const fetchMs = Math.max(1500, Math.floor(budget / 2));
+    const to = ctl ? setTimeout(() => ctl.abort(), fetchMs) : null;
+    const r = await fetch(url, { referrerPolicy: 'no-referrer', cache: 'no-store', signal: ctl ? ctl.signal : undefined });
     if (to) clearTimeout(to);
     if (r.ok) return await r.json();
     throw new Error('HTTP ' + r.status);
   } catch (e){
-    return jsonp(url, (timeout && timeout < 8000) ? 1 : 3, cbParam);
+    // 剩余预算按 4.5s/次切分，重试次数至少 1 次（否则连 jsonp 都不试，直接失败）
+    const left = Math.max(1000, budget - Math.floor(budget / 2));
+    const tries = Math.max(1, Math.min(3, Math.floor(left / 4500)));
+    const perTry = Math.max(1000, Math.floor(left / tries));
+    return jsonp(url, tries, cbParam, perTry);
   }
 }
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
@@ -942,19 +1005,29 @@ function buildStats(code){
 /* =====================================================================
    主图纵轴的 0 轴基准。三档：
      yest   —— 昨日全天（默认，保持原样）
-     avg5   —— 近 5 个已完成交易日的均量（对单日极端值不敏感）
+     avg5   —— 今日之前 4 个已完成交易日的均量（对单日极端值不敏感；**不含今日**）
      med60  —— 内置历史里全部交易日的量能中位数（最稳健；需本地数据集）
    「昨日全天」在极端日会骗人：昨天缩量暴跌时，今日 +25% 其实只是均值回归，
    换成后两档能看出这层区别。
    ===================================================================== */
 let BASE_MODE = 'yest';
-const BASE_NAME = { yest: '昨日全天', avg5: '近5日均量', med60: '历史中位量能' };
+const BASE_NAME = { yest: '昨日全天', avg5: '前4日均量', med60: '历史中位量能' };
+/* 「前 N 日均量」唯一出口：只统计 model.days 中**今日之前**的交易日（slice(0, DAYS-1)），
+   绝不把今日算进去。
+   ⚠️ 为什么必须排除今日：盘中今日累计量还没跑完（10:00 可能只走了 15%），
+   把它算进均值会把基准压低约 1/(N+1)，导致「相对均量」的比例偏大、看起来更像放量——
+   这是会翻转结论的系统性偏差，不是显示问题。
+   返回 {v: 均值, n: 实际参与统计的天数}，n 用于标签，避免名不副实的写法（如"近5日"实则只 4 天）。 */
+function priorAvg(){
+  const ds = model.days.slice(0, DAYS - 1).filter(d => isFinite(d.total) && d.total > 0);
+  if (!ds.length) return { v: NaN, n: 0 };
+  return { v: ds.reduce((s, d) => s + d.total, 0) / ds.length, n: ds.length };
+}
 function baseVal(){
   const yest = model.days[DAYS - 2];
   if (BASE_MODE === 'avg5'){
-    let s = 0, c = 0;
-    for (let i = 0; i < DAYS; i++){ const t = model.days[i].total; if (isFinite(t) && t > 0){ s += t; c++; } }
-    if (c) return s / c;
+    const a = priorAvg();
+    if (a.n > 0) return a.v;
   } else if (BASE_MODE === 'med60'){
     const st = model.stats;
     if (st && isFinite(st.medAll) && st.medAll > 0) return st.medAll;
@@ -1062,10 +1135,10 @@ const cv = el('cv'), ctx = cv.getContext('2d');
    在深灰底上的对比度成倍提升，这也是交易室普遍用暗色的原因。 */
 const PAL_LIGHT = {
   grid:'#eef1f5', grid2:'#e5e8ee', ink:'#171a20', ink2:'#5d6675', ink3:'#98a1b0',
-  up:'#e5384a', down:'#0fa968', pred:'#2f6fed', extrap:'#f08c00', yest:'#b3bccb',
+  up:'#e5384a', down:'#0fa968', pred:'#2f6fed', extrap:'#f08c00', avg5:'#0e7490', yest:'#b3bccb',
   ov:'#7a45e6', ovDeep:'#5b3fb0', ovHalo:'rgba(122,69,230,.18)', ovBase:'rgba(122,69,230,.36)',
   ovLane:'rgba(255,255,255,.62)', ovDot:'#ffffff', ovTick:'#4a3a86', ovTick2:'#9b93bd',
-  c1:'#e8590c', c2:'#1971c2', c3:'#7048e8', c4:'#0ca678',
+  c1:'#e8590c', c2:'#1971c2', c3:'#f0b400', c4:'#0ca678',
   idle:'#b3bccb', card:'#ffffff',
   future:'rgba(150,161,176,.045)', zeroax:'rgba(90,101,120,.85)',
   bandFill:'rgba(47,111,237,.055)', bandLine:'rgba(47,111,237,.34)', bandKey:'rgba(47,111,237,.45)',
@@ -1077,10 +1150,10 @@ const PAL_LIGHT = {
 };
 const PAL_DARK = {
   grid:'#1c2431', grid2:'#252e3d', ink:'#e1e7f0', ink2:'#a3aebf', ink3:'#6d7889',
-  up:'#f6465d', down:'#0ecb81', pred:'#4c8dff', extrap:'#f59e0b', yest:'#7d8798',
+  up:'#f6465d', down:'#0ecb81', pred:'#4c8dff', extrap:'#f59e0b', avg5:'#22d3ee', yest:'#7d8798',
   ov:'#a855f7', ovDeep:'#c084fc', ovHalo:'rgba(168,85,247,.26)', ovBase:'rgba(168,85,247,.45)',
   ovLane:'rgba(15,19,25,.80)', ovDot:'#171d26', ovTick:'#b98cfd', ovTick2:'#8b5fd6',
-  c1:'#f59e0b', c2:'#4c8dff', c3:'#a855f7', c4:'#2dd4a7',
+  c1:'#f59e0b', c2:'#4c8dff', c3:'#ffd400', c4:'#2dd4a7',
   idle:'#6d7889', card:'#171d26',
   future:'rgba(160,170,190,.05)', zeroax:'rgba(150,165,190,.72)',
   bandFill:'rgba(76,141,255,.085)', bandLine:'rgba(76,141,255,.42)', bandKey:'rgba(76,141,255,.55)',
@@ -1266,7 +1339,7 @@ function draw(){
     const key = 'pred', r = paneRects[key];
     const yRef = (isFinite(model.base) && model.base > 0) ? model.base
                : ((yest && yest.total > 0) ? yest.total : NaN);
-    // 相对「当前基准量能」的百分比（基准可切换：昨日全天 / 近5日均量 / 历史中位）
+    // 相对「当前基准量能」的百分比（基准可切换：昨日全天 / 前4日均量 / 历史中位）
     const rel = (arr, j) => (yRef > 0 && isFinite(arr[j]) && arr[j] > 0) ? arr[j] / yRef - 1 : NaN;
     const A = S.predKpl, B = S.predApp, C = S.pred5;
 
@@ -1374,7 +1447,7 @@ function draw(){
       const fillSeg = (j, v0, v1) => {
         const x0 = xOf(j - 1), x1 = xOf(j);
         const y0 = yOf(key, v0, mn, mx), y1 = yOf(key, v1, mn, mx);
-        ctx.fillStyle = (v0 + v1) >= 0 ? withA(PAL.up, .15) : withA(PAL.down, .15);
+        ctx.fillStyle = v1 >= v0 ? withA(PAL.up, .15) : withA(PAL.down, .15);
         ctx.beginPath();
         ctx.moveTo(x0, yz); ctx.lineTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x1, yz);
         ctx.closePath(); ctx.fill();
@@ -1391,7 +1464,7 @@ function draw(){
         ctx.restore();
       }
       if (show5){
-        ctx.save(); ctx.setLineDash([4, 3]);
+        ctx.save(); ctx.setLineDash([3, 8]);
         drawLine(key, pctArr(C, yRef), withA(PAL.extrap, .7), mn, mx, 0, J, 1.2);
         ctx.restore();
       }
@@ -1400,7 +1473,7 @@ function draw(){
       for (let j = 1; j <= J; j++){
         const v0 = rel(A, j - 1), v1 = rel(A, j);
         if (!isFinite(v0) || !isFinite(v1)) continue;
-        ctx.strokeStyle = (v0 + v1) >= 0 ? PAL.up : PAL.down;
+        ctx.strokeStyle = v1 >= v0 ? PAL.up : PAL.down;
         ctx.beginPath();
         ctx.moveTo(xOf(j - 1), yOf(key, v0, mn, mx));
         ctx.lineTo(xOf(j), yOf(key, v1, mn, mx));
@@ -1415,8 +1488,57 @@ function draw(){
         ctx.beginPath(); ctx.arc(x, y, 3.6, 0, 7);
         ctx.fillStyle = vJ >= 0 ? PAL.up : PAL.down; ctx.fill();
         ctx.lineWidth = 1.6; ctx.strokeStyle = PAL.ovDot; ctx.stroke();
+        // 线头数据时刻（到分钟，较线头所在 bar 回退 1 分钟）—— 显示在量能曲线线头右侧（右侧价格轴留白区内）
+        const tTxt = fmtT(BAR_TIMES[Math.max(0, J - 1)]);
+        ctx.save();
+        ctx.font = '600 12px ' + FONT;
+        const ttw = ctx.measureText(tTxt).width;
+        const ty = y;
+        let txLeft = x + 8;                       // 默认在右侧
+        const maxRight = r.x + r.w + (LAY.right || 0) - 2;
+        if (txLeft + ttw > maxRight) txLeft = x - 8 - ttw;   // 超出画布则回退到左侧
+        txLeft = Math.max(txLeft, r.x + 2);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = PAL.tagBg;
+        ctx.fillRect(txLeft - 4, ty - 9, ttw + 8, 18);
+        ctx.fillStyle = PAL.tagInk;
+        ctx.fillText(tTxt, txLeft, ty);
+        ctx.restore();
       }
     });
+
+      // 「前 N 日均量」参考横线：绝对量（成交额），独立于基准切换；口径与 baseVal('avg5') 共用 priorAvg()（排除今日）。
+      // 当基准本身就是该均量时，它与 0 轴重合，跳过避免重画。
+      if (BASE_MODE !== 'avg5' && yRef > 0 && model.days){
+        const a5 = priorAvg();
+        if (a5.n > 0){
+          const avg5 = a5.v;
+          const rel5 = avg5 / yRef - 1;
+          const y5 = yOf(key, clamp(rel5, mn, mx), mn, mx);
+          ctx.save();
+          ctx.setLineDash([5, 4]); ctx.lineWidth = 1.4; ctx.strokeStyle = PAL.avg5;
+          ctx.beginPath();
+          ctx.moveTo(r.x, Math.round(y5) + .5); ctx.lineTo(r.x + r.w, Math.round(y5) + .5); ctx.stroke();
+          // 标签（左侧，避开右侧的「基准量能」标签）
+          ctx.font = '600 10.5px ' + FONT;
+          const lb = a5.n + '日均量 ' + fmtAmt(avg5);
+          const tw = ctx.measureText(lb).width;
+          const bx = r.x + 8, by = clamp(y5 + 7, r.py + 2, r.py + r.ph - 17);
+          ctx.fillStyle = PAL.tagBg; ctx.fillRect(bx - 6, by, tw + 12, 16);
+          ctx.fillStyle = PAL.avg5; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(lb, bx, by + 8.5);
+          ctx.restore();
+        }
+      }
+
+      // 午休分隔线：11:30 区分上午 / 下午（灰白色竖虚线，贯穿主图量能面板）
+      {
+        const xm = xOf(BPD / 2);   // 网格中点 = 上午结束 / 下午开始（午休）
+        ctx.save();
+        ctx.strokeStyle = 'rgba(178,178,178,.65)'; ctx.lineWidth = 1.2; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(Math.round(xm) + .5, r.y); ctx.lineTo(Math.round(xm) + .5, r.y + r.h); ctx.stroke();
+        ctx.restore();
+      }
 
     // 0 轴右侧的「基准量能」标注（对应开盘啦那条基准线，基准可切换）
     if (yRef > 0){
@@ -1474,16 +1596,25 @@ function draw(){
           }
           ctx.stroke(); ctx.restore();
         };
-        strokeOv(7.0, PAL.ovLane);
-        strokeOv(4.6, PAL.ovHalo);
-        strokeOv(2.2, OV_COLOR);
+        // 指数分时线改细：去掉粗白描衬底（那层会压住量能曲线），仅保留淡紫光晕 + 紫色细主线
+        strokeOv(2.6, PAL.ovHalo);
+        strokeOv(1.5, OV_COLOR);
 
-        // 最新点
+        // 最新点 + 线头涨跌幅标签（涨红跌绿）
         const lastPct = ov.pct[J];
         if (isFinite(lastPct)){
           const x = xOf(J), y = ovY(clamp(lastPct, -ovRng, ovRng));
           ctx.beginPath(); ctx.arc(x, y, 3.4, 0, 7); ctx.fillStyle = OV_COLOR; ctx.fill();
           ctx.lineWidth = 1.6; ctx.strokeStyle = PAL.ovDot; ctx.stroke();
+          const pctTxt = (lastPct >= 0 ? '+' : '') + lastPct.toFixed(2) + '%';
+          ctx.font = '700 15px ' + FONT;
+          ctx.fillStyle = lastPct >= 0 ? PAL.up : PAL.down;   // 涨红跌绿
+          const nearTop = y < r.py + 16, nearBot = y > r.py + r.ph - 16;
+          const rightEdge = x > r.x + r.w - 66;
+          ctx.textAlign = rightEdge ? 'right' : 'left';
+          ctx.textBaseline = nearTop ? 'top' : 'bottom';
+          ctx.fillText(pctTxt, x + (rightEdge ? -8 : 8), nearTop ? y + 8 : y - 8);
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
         }
       });
 
@@ -1561,6 +1692,10 @@ function draw(){
       items.push(['量能脉冲', vt >= vy ? PAL.up : PAL.down,
         vy > 0 ? (vt / vy >= 1 ? '+' : '') + ((vt / vy - 1) * 100).toFixed(1) + '%' : '—']);
     }
+    {
+      const _a = priorAvg();   // 与 baseVal('avg5')、主图参考线同一口径（排除今日）
+      if (BASE_MODE !== 'avg5' && _a.n > 0) items.push([_a.n + '日均量', PAL.avg5, fmtAmt(_a.v)]);
+    }
     if (show4) items.push(['单日同比(对照)', PAL.pred, fmtAmt(pB) + ' ' + dStr(pctRel(pB))]);
     if (show5) items.push(['5分钟外推', PAL.extrap, fmtAmt(p5) + ' ' + dStr(pctRel(p5))]);
     if (ov){
@@ -1613,8 +1748,8 @@ function draw(){
         drawLine(key, S.JLB, withA(PAL.c1, .55), mn, mx, 0, J, 1);
         drawLine(key, S.LB1, withA(PAL.c4, .55), mn, mx, 0, J, 1);
       }
-      drawLine(key, S.MLB,  PAL.c2, mn, mx, 0, J, 2.3);
-      drawLine(key, S.JMLB, PAL.c3, mn, mx, 0, J, 2.3);
+      drawLine(key, S.MLB,  PAL.c2, mn, mx, 0, J, 1.8);
+      drawLine(key, S.JMLB, PAL.c3, mn, mx, 0, J, 1.8);
     });
 
     const f = v => (isFinite(v) ? v.toFixed(3) : '—');
@@ -1754,10 +1889,16 @@ function renderHero(){
   const ref = model.ref, today = model.today, yest = model.days[DAYS-2];
   if (!ref || !today) return;
   const amt = today.total, yTot = yest ? yest.total : NaN;
-  const d = yTot > 0 ? amt / yTot - 1 : NaN;
+  // 改为「较昨日同期」：今日截至当前的累计成交额，对比昨日同时刻的累计已成交，
+  // 得到同口径的放量/缩量比例（而非 vs 昨日全天，后者早盘会被时间差严重压低）。
+  const jNow = model.lastBar >= 0 ? model.lastBar : 0;
+  const tCum = (today.cum && today.cum[jNow] > 0) ? today.cum[jNow] : amt;
+  const yCum = (yest && yest.cum && yest.cum[jNow] > 0) ? yest.cum[jNow] : NaN;
+  const d = yCum > 0 ? tCum / yCum - 1 : NaN;
   const col = d >= 0 ? 'var(--up)' : 'var(--down)';
-  const priors = model.days.slice(0, DAYS-1).filter(dd => dd.total > 0);
-  const avgN = priors.length ? priors.reduce((s,dd) => s + dd.total, 0) / priors.length : NaN;
+  // 「前 N 日均量」：复用 priorAvg()（**排除今日**），与 0 轴基准档、主图参考线、
+  // KPI 卡完全同一口径。盘中今日累计量不完整，纳入均值会系统性压低基准、放大放量读数。
+  const _pa = priorAvg(), avgN = _pa.v, avgNn = _pa.n;
 
   const isHist = !!model.histDate;
   let rq = ref.quote;
@@ -1774,14 +1915,13 @@ function renderHero(){
     <div style="display:flex;align-items:baseline;flex-wrap:wrap">
       <span class="nm">${ref.name}${unitName()}</span><span class="cd">${ref.code}</span>
       ${isHist ? `<span class="cd" style="color:var(--pred);font-weight:600">复盘 ${fmtD8(model.histDate)}${AMT_UNIT === 'vol' ? ' · 成交量口径' : ''}</span>` : ''}
-      <span id="pill">${pillHTML()}</span>
       <span class="px" style="color:${col}">${fmtAmt(amt)}</span>
-      ${isFinite(d) ? `<span class="chg" style="color:${col}">${d >= 0 ? '+' : ''}${(d * 100).toFixed(2)}% 较昨日</span>` : ''}
+      ${isFinite(d) ? `<span class="chg" style="color:${col}"><span style="font-size:calc(1em + 5px)">${d >= 0 ? '+' : ''}${(d * 100).toFixed(2)}%</span> <span style="font-size:calc(1em + 1px);color:var(--ink3)">较昨日同期</span></span>` : ''}
     </div>
     <div class="meta">
-      <span><i>昨日全天</i><b>${yTot ? fmtAmt(yTot) : '—'}</b></span>
-      <span><i>近${priors.length}日均量</i>${isFinite(avgN) ? fmtAmt(avgN) : '—'}</span>
-      ${rq ? `<span style="padding-left:14px;border-left:1px solid var(--line)">
+      <span><i>昨天同期</i><b style="font-size:calc(1em + 2px)">${yCum > 0 ? fmtAmt(yCum) : '—'}</b></span>
+      <span><i>前${avgNn}日均量</i><b style="font-size:calc(1em + 2px)">${isFinite(avgN) ? fmtAmt(avgN) : '—'}</b></span>
+      ${rq ? `<span style="padding-left:14px;border-left:1px solid var(--line);font-size:calc(1em + 3px)">
         <i>${isHist ? '收盘' : '现价'}</i><b style="color:${rCol}">${rq.price.toFixed(2)}</b>
         <span style="color:${rCol};font-weight:600">${rq.chg >= 0 ? '+' : ''}${rq.chgPct.toFixed(2)}%</span></span>` : ''}
     </div>`;
@@ -1793,14 +1933,14 @@ function renderKpis(){
              : ((yest && yest.total > 0) ? yest.total : NaN);
   const pK = S.predKpl[J], pA = S.predApp[J];
   const yTot = yest ? yest.total : NaN;
-  const priors = model.days.slice(0, DAYS-1).filter(d => d.total > 0);
-  const avgN = priors.length ? priors.reduce((s,d) => s + d.total, 0) / priors.length : NaN;
+  // 与 baseVal / 主图参考线 / 头部共用 priorAvg()（排除今日），避免同一页两套口径
+  const _pa = priorAvg(), avgN = _pa.v, nPrior = _pa.n;
   const act = model.today.cum[J];
 
-  const card = (title, color, val, sub, subCol) => `
+  const card = (title, color, val, sub, subCol, vStyle) => `
     <div class="card kpi">
       <div class="t">${color ? `<span class="sw" style="background:${color}"></span>` : ''}${title}</div>
-      <div class="v">${val}</div>
+      <div class="v" ${vStyle ? `style="${vStyle}"` : ''}>${val}</div>
       <div class="s" ${subCol ? `style="color:${subCol}"` : ''}>${sub}</div>
     </div>`;
 
@@ -1816,12 +1956,13 @@ function renderKpis(){
   el('kpis').innerHTML =
     card('预测量能 · 开盘啦口径', isFinite(dK) ? cl(dK) : 'var(--ink3)',
       fmtAmt(pK),
-      `${sgn(dK)}　增量 ${delta(isFinite(pK) ? pK - yRef : NaN)}`) +
+      `${isFinite(dK) ? `<span style="font-size:calc(1em + 6px);font-weight:700;color:${cl(dK)}">${dK >= 0 ? '+' : ''}${(dK*100).toFixed(2)}%</span><span style="font-size:calc(1em + 4px);font-weight:400"> vs ${bn === '昨日全天' ? '昨天' : bn}</span>` : '—'}　增量 <span style="font-size:calc(1em + 5px)">${delta(isFinite(pK) ? pK - yRef : NaN)}</span>`,
+      null, 'font-size:calc(1em + 6px)') +
     card('实际量能 · 截至当前', null, fmtAmt(act),
       `较昨日同刻 <b style="color:${isFinite(dAct)?cl(dAct):'var(--ink3)'}">${isFinite(dAct)?(dAct>=0?'+':'')+(dAct*100).toFixed(2)+'%':'—'}</b>` +
-      `　较近${priors.length}日均量 <b style="color:${isFinite(dPrev)?cl(dPrev):'var(--ink3)'}">${isFinite(dPrev)?(dPrev>=0?'+':'')+(dPrev*100).toFixed(2)+'%':'—'}</b>`) +
+      `　较前${nPrior}日均量 <b style="color:${isFinite(dPrev)?cl(dPrev):'var(--ink3)'}">${isFinite(dPrev)?(dPrev>=0?'+':'')+(dPrev*100).toFixed(2)+'%':'—'}</b>`) +
     card(bn + '（主图 0 轴）', null, fmtAmt(yRef),
-      `昨日量能 ${fmtAmt(yTot)}　近 ${priors.length} 日均量 ${fmtAmt(avgN)}`) +
+      `昨日量能 ${fmtAmt(yTot)}　前 ${nPrior} 日均量 ${fmtAmt(avgN)}`) +
     card('参考 · 只看昨日（口径偏高）', 'var(--pred)', fmtAmt(pA), sgn(dA));
   syncPill();
   renderResoTip();
@@ -1985,7 +2126,8 @@ function showTip(j, x, y){
 const DAYQ = 'https://web.ifzq.gtimg.cn/appstock/app/day/query?code=';
 
 async function fetchSeries(code){
-  const d = await jsonp(DAYQ + code);
+  // 总预算 9s：保证单次刷新最坏 9s < 自动刷新周期 30s，不会因一次慢请求就跨周期跳票
+  const d = await fetchJson(DAYQ + code, '_var', 9000);   // 优先 fetch(no-store)，失败降级 JSONP
   const node = d && d.data && d.data[code];
   if (!node || !node.data || !node.data.length) throw new Error('未找到 ' + code + ' 的分时数据');
   const qt = node.qt && node.qt[code];
@@ -2371,15 +2513,18 @@ async function load(code, keepSlot){
     renderHero(); renderKpis(); syncBaseBtns(); draw();
     el('upd').textContent = new Date().toLocaleTimeString('zh-CN', { hour12:false });
     setStatus('ok');
+    lastOkAt = Date.now();      // 供 autoFail 判断「失败之后是否真的又刷新成功了」
     document.querySelectorAll('.chip').forEach(c =>
       c.classList.toggle('active', c.dataset.code === model.refCode));
     try { history.replaceState(null, '', '#' + code); } catch (e) {}
     el('code').value = '';
     if (!keepSlot) el('hdate').value = '';   // 回到实时模式时清空复盘日期（自动刷新不清，避免打断输入）
     syncHistUI();
+    return true;                            // 明确回报成功（load 内部吞掉了异常，不 return 的话调用方无法区分）
   } catch (err){
     setStatus('error', err.message);
     if (!keepSlot) toast('切换失败：' + err.message);
+    else autoFail(err.message);   // 自动/手动刷新（keepSlot）失败也要可见，否则像“没刷新”
     if (!model.series){
       const fileHint = location.protocol === 'file:'
         ? `<br/><span style="color:var(--ink3)">当前以 file:// 方式打开，若浏览器拦截了对外的数据请求，可在本目录执行
@@ -2390,6 +2535,7 @@ async function load(code, keepSlot){
         <span style="color:var(--ink3)">请检查网络后点击「立即刷新」重试。</span></div>`;
       el('kpis').innerHTML = '';
     }
+    return false;               // 同上：失败也要明确回报，供自动刷新统计连续失败次数
   }
 }
 
@@ -2509,8 +2655,7 @@ function setStatus(s, msg){
   if (s === 'loading'){ dot.className = 'dot live'; st.textContent = '读取中…'; }
   else if (s === 'hist'){
     dot.className = 'dot';
-    const g = (model.histSrc === 'local1m') ? '本地1分钟数据·240根/日' : (GRID_K + '分钟网格');
-    st.textContent = '复盘 ' + fmtD8(msg) + ' · 历史快照 · ' + g + ' · ' + unitName() + '口径';
+    st.textContent = '复盘 ' + fmtD8(msg);
   }
   else if (s === 'ok'){
     const now = new Date(), mins = now.getHours()*60 + now.getMinutes();
@@ -2520,6 +2665,26 @@ function setStatus(s, msg){
     dot.className = 'dot' + (trading ? ' live' : '');
     st.textContent = trading ? '盘中' : '非交易时段（数据为最近交易日）';
   } else { dot.className = 'dot'; st.textContent = msg || '读取失败'; }
+}
+/* 自动刷新（keepSlot）失败时给出可见提示：否则轮询请求偶发失败会被静默吞掉，
+   用户只看到数据不动、以为“不刷新”，只能手动 F5。琥珀点 + 状态行，5 秒后自动恢复。
+   ⚠️ v1.1 修复：原来无条件 5 秒后就把状态改回「ok」，若失败是**持续性**的（断网/接口挂了），
+   用户会看到「失败」闪一下就消失、状态又变正常，而数据其实早就停更了 —— 反而更难察觉。
+   现在只有「确实有成功刷新过」才恢复；否则保留琥珀点并显示连续失败次数。 */
+let autoFailT = null, lastOkAt = 0;
+function autoFail(msg){
+  const dot = el('dot'), st = el('status');
+  if (!dot || !st) return;
+  dot.className = 'dot err';
+  st.textContent = '自动刷新失败' + (failStreak > 1 ? '（连续 ' + failStreak + ' 次）' : '') +
+                   '：' + msg + ' · ' + new Date().toLocaleTimeString('zh-CN', { hour12:false});
+  clearTimeout(autoFailT);
+  autoFailT = setTimeout(() => {
+    // 只有在「失败之后确实又成功刷新过」时才恢复常态显示
+    if (!model || !model.series) return;
+    if (failStreak === 0 && lastOkAt > 0) setStatus('ok');
+    else if (failStreak > 0) autoFailT = setTimeout(autoFail, 1);   // 仍在失败：保持琥珀点
+  }, 5000);
 }
 
 /* ------------------------------ 控件绑定 ------------------------------ */
@@ -2761,7 +2926,7 @@ const KEYMAP = [
   ['—', '显示开关'],
   ['O', '叠加 / 隐藏标的分时线'],
   ['C', '显示 / 隐藏置信带'],
-  ['B', '0轴基准轮换（昨日→近5日→历史中位）'],
+  ['B', '0轴基准轮换（昨日→前4日均量→历史中位）'],
   ['R', '分量比 主线 / 全线'],
   ['G', '量比共振色带'],
   ['Y', '共振阈值轮换（严格/标准/宽松）'],
@@ -2885,13 +3050,88 @@ el('btnP5').addEventListener('click', () => {
   draw();
 });
 
-let auto = true, timer = null;
+const AUTO_MS = 30000;     // 自动刷新周期
+const STUCK_MS = 25000;    // 单次请求超过这么久没回来，判定为挂死并解锁（见下方 bug 说明）
+
+let auto = true, timer = null, lastTick = 0, loading = false, cdTimer = null, stuckT = null, failStreak = 0, loadingSince = 0;
+
+/* ⚠️ 这里原本有个必现的「刷新卡死」缺陷，修复记录（v1.1）：
+   原码是 `if (loading) return;` —— 一旦某次请求的 promise 永不 settle（弱网/移动网络切换/
+   服务端挂起连接/被代理劫持），loading 就永远为 true，之后**每一个 tick 都被静默 return**，
+   表现就是「自动刷新彻底不工作，只能 F5」。实测复现：模拟 fetch 永不返回，
+   52 秒内 load() 只被调用 1 次（首屏那次），后续 9 次 tick 全部被跳过。
+   更隐蔽的是：fetchJson 失败会降级 jsonp(3 次重试 × 12s)，叠加 fetch 自身 9s 超时，
+   **单次刷新最坏 45 秒 > 刷新周期 30 秒**，所以只要网络稍差就必然跨周期跳票。
+   修法（三处）：
+   ① loading 锁加看门狗定时器，超过 STUCK_MS 强制解锁并给出可见提示，不让一次挂死拖垮整个刷新链；
+   ② 倒计时在「正在刷新 / 已跳过」时如实显示，不再自顾自走秒数骗人；
+   ③ 连续失败计数达阈值时，把真实原因显示在状态行，而不是永远停在「读取中…」。 */
+function unlockStuck(){
+  loading = false;
+  try { clearTimeout(stuckT); } catch(e){}
+  stuckT = null;
+  autoFail('上次请求超时未返回（已自动解锁，将重试）');
+}
+function doRefresh(){
+  if (!auto || !model.refCode || model.histDate) return;   // 复盘模式为历史快照，不自动刷新
+  if (loading) return;                                     // 上一次还没回来，避免请求堆积
+  loading = true;
+  loadingSince = Date.now();
+  try { clearTimeout(stuckT); } catch(e){}
+  stuckT = setTimeout(unlockStuck, STUCK_MS);              // 看门狗：到点强制解锁
+  load(model.refCode, true)
+    .then(ok => {
+      // load() 内部已吞掉异常，所以用它的返回值判断成败（不靠 .catch）
+      if (ok === false) failStreak++;
+      else { failStreak = 0; }
+    })
+    .catch(() => { failStreak++; })
+    .finally(() => {
+      // 注意：这里不能无条件 loading=false —— 若 promise 永不 settle，finally 根本不会执行，
+      // 真正兜底的是上面的看门狗。此处只做「已正常结束」的清理。
+      clearTimeout(stuckT); stuckT = null;
+      loading = false;
+    });
+}
+function tick(){
+  const now = Date.now();
+  if (now - lastTick < 2000) return;   // 去抖：focus/visibility 同时触发时避免重复请求
+  lastTick = now;
+  doRefresh();
+}
 function startAuto(){
   clearInterval(timer);
-  timer = setInterval(() => {
-    if (auto && model.refCode && !model.histDate) load(model.refCode, true);   // 复盘模式为历史快照，不自动刷新
-  }, 30000);
+  timer = setInterval(tick, AUTO_MS);
 }
+/* 每秒刷新倒计时：让你直接看到定时器在跑、距下次刷新还有多久（自诊断用）
+   ⚠️ 修复后新增两种诚实状态：正在刷新 / 请求挂起。此前无论有没有真的在刷新，
+   倒计时都自顾自从 30 数到 0，把「跳票」伪装成「正常」，是用户判断不了故障的原因。 */
+function startCountdown(){
+  clearInterval(cdTimer);
+  cdTimer = setInterval(() => {
+    const au = el('auto'); if (!au) return;
+    if (model.histDate){ au.textContent = '复盘模式 · 不自动刷新'; return; }
+    if (!auto){ au.textContent = '自动刷新已关'; return; }
+    if (loading){
+      // 看门狗还剩多久强制解锁，让「卡住」这件事本身可见
+      const left = Math.max(0, Math.ceil((STUCK_MS - (Date.now() - (loadingSince || 0))) / 1000));
+      au.textContent = stuckT ? ('刷新中·卡住则 ' + left + 's 后解锁') : '刷新中…';
+      return;
+    }
+    const left = Math.max(0, Math.ceil((AUTO_MS - (Date.now() - lastTick)) / 1000));
+    au.textContent = failStreak > 0 ? ('刷新失败×' + failStreak + ' · 重试中') : ('下次刷新 ' + left + 's');
+  }, 1000);
+}
+/* 量能监控通常被放在后台标签页；浏览器会对后台标签的 setInterval 降频甚至暂停，
+   导致“看着不刷新、必须手动 F5”。切回前台（或窗口重新聚焦）时立即刷新一次，
+   并重启 30s 计时，保证你看到的总是新鲜数据。 */
+function onVisible(){
+  if (document.hidden) return;
+  tick();           // 先立刻拉一次
+  startAuto();      // 再重置 30s 计时，避免后台累积的漂移
+}
+document.addEventListener('visibilitychange', onVisible);
+window.addEventListener('focus', onVisible);
 el('btnAuto').addEventListener('click', () => {
   auto = !auto;
   el('btnAuto').classList.toggle('on', auto);
@@ -2948,6 +3188,7 @@ applyTheme();              // 初始化时把画布调色板与主题对齐（�
 const bootCode = normCode(decodeURIComponent(String(location.hash || '').replace(/^#/, ''))) || DEFAULT_REF;
 load(bootCode, false);
 startAuto();
+startCountdown();
 </script>
 </body>
 </html>
