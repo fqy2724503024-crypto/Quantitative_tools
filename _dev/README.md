@@ -26,14 +26,42 @@ python _dev/xls2inline.py  <通达信导出目录>  index.html
 | `make_avgfix.cjs` | **v1.2** 均量口径：断言 `priorAvg()` 排除今日、与 `baseVal` 同源、标签无残留 |
 | `make_autorefresh.cjs` | **v1.2** 自动刷新真实跑 70s：钩 `fetchJson/jsonp/load` 计数 + 每秒采样 `upd`/`loading`/倒计时/`dot` |
 | `make_arsim.cjs` | **v1.2** 故障注入：把 `fetch` 换成永不 resolve 的假 fetch 复现刷新卡死（需 ~75s） |
-| `make_ver.cjs` | **v1.2** 版本徽标：文本/样式/标题/更新说明/暗色跟随；`node make_ver.cjs shot` 额外截图 |
+| `make_ver.cjs` | 版本徽标：文本与 `APP_VERSION` 自洽 / 样式 / 标题 / 更新说明 / 暗色跟随；`shot` 参数额外截图（**版本无关**，升级版本不必改测试） |
+| `make_livepush.cjs` | **v1.3** 盘中推进：断言自动刷新后 `view.j` 跟随 `lastBar` 前移、滑块/时间标签同步、用户停靠位置不被拉走；含**像素级校验**（墨量须增加） |
 
 `make_real.cjs` 支持 `SRC=` / `OUT=` 环境变量，可直接测 `交付/量能雷达.html`
 （验证 `file://` 协议下真实可用）。**所有脚本都支持 `SRC=xxx`**，便于测任意副本：
 
 ```bash
-SRC="D:/document/量能雷达-v1.2.html" node _dev/make_p0.cjs
+SRC="D:/document/量能雷达-v1.3.html" node _dev/make_p0.cjs
 ```
+
+## 定位「刷新不工作」类问题的方法论（v1.2 / v1.3 两次都用到了）
+
+这类问题的共同点：**正常网络下测试是通过的，静态读代码也看不出问题**，必须构造场景。
+
+### 三类典型故障与复现手法
+
+| 故障 | 复现手法 | 脚本 |
+| --- | --- | --- |
+| 刷新彻底卡死（请求永不 settle） | 把 `window.fetch` 换成永不 resolve 的 Promise，并把刷新周期 30s 压到 6s 放大 | `make_arsim.cjs` |
+| 刷新了但数据没更新 | 真实跑 70s，钩住 `fetchJson/jsonp/load` 计数 + 每秒采样 `upd`/`loading`/`dot` | `make_autorefresh.cjs` |
+| 刷新了、数据更新了，但**图线不前进** | stub `fetchSeries` 返回"盘中走到第 k 根"的合成快照，断言 `view.j` 随 `lastBar` 前移 | `make_livepush.cjs` |
+
+### ⚠️ 构造"盘中进度"快照的关键陷阱
+
+**不能直接拿今日真实数据截断**：盘中今天本来就只有几十根（实测 47 根），
+把 `j > k` 清零根本不改变 `lastBar`（`lastBar` = 最后一根 `amt>0` 的 bar），
+截断到 100 毫无效果，**测试会假通过**。
+正解：**先用昨日完整数据充当今日**（240 根齐），再截断到 k，`lastBar` 就确定性等于 k。
+
+### 断言的两个坑（都真实踩过）
+
+1. **DOM 属性是字符串**：`rng.value` 是 `"140"` 而非 `140`，
+   `value === 140` 恒为假 → 会把"已同步"误判成 bug。必须 `+value === 140`。
+2. **变量名改过就别再按旧名写 patch**：`make_ver.cjs` 里 `notes` 曾改名为 `cards`，
+   之后按 `notes[i]` 写的替换脚本静默失配（不报错），导致版本升级后断言仍查旧版本号。
+   改断言后**务必 grep 一遍是否还有硬编码残留**。
 
 ## 两条踩坑备忘（写测试时反复遇到）
 

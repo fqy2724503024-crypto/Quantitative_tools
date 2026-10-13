@@ -1,5 +1,5 @@
-/* v1.2 版本号徽标验证：亮/暗双主题渲染检查
-   断言：①徽标文本 = "v1.2"  ②document.title 含 v1.2  ③暗色下徽标配色跟随变量（非写死色）
+/* 版本号徽标验证：亮/暗双主题渲染检查
+   断言：①徽标文本与 APP_VERSION 自洽  ②document.title 含该版本  ③暗色下徽标配色跟随变量（非写死色）
         ④变更说明区块存在且含关键条目  ⑤无 JS 错误
    用法：node make_ver.cjs [shot]     shot 参数会额外截图
 */
@@ -25,7 +25,8 @@ window.__SHOT = ${SHOT ? 'true' : 'false'};
       var ver = document.querySelector('.logo .ver');
       log('  徽标元素存在: ' + (ver ? '✅' : '❌'));
       if (ver){
-        log('  文本 = "' + ver.textContent + '"  ' + (ver.textContent === 'v1.2' ? '✅ 正确' : '❌ 应为 v1.2'));
+        var exp = 'v' + APP_VERSION;
+        log('  文本 = "' + ver.textContent + '"  期望 = "' + exp + '"  ' + (ver.textContent === exp ? '✅ 与 APP_VERSION 自洽' : '❌ 与 APP_VERSION 不一致'));
         var cs = getComputedStyle(ver);
         log('  样式: color=' + cs.color + ' background=' + cs.backgroundColor +
             ' border=' + cs.borderColor + ' weight=' + cs.fontWeight + ' size=' + cs.fontSize);
@@ -36,19 +37,18 @@ window.__SHOT = ${SHOT ? 'true' : 'false'};
       log('');
       log('=== ② 标题 ===');
       log('  document.title = "' + document.title + '"');
-      log('  ' + (document.title.indexOf('v1.2') >= 0 ? '✅ 含 v1.2' : '❌ 不含版本号'));
+      log('  ' + (document.title.indexOf('v' + APP_VERSION) >= 0 ? '✅ 含 v' + APP_VERSION : '❌ 标题未同步版本号'));
 
       log('');
       log('=== ③ 变更说明区块 ===');
       var cards = document.querySelectorAll('.card');
       var found = false, txt = '';
       for (var i=0;i<cards.length;i++){
-        if (cards[i].textContent.indexOf('v1.2 更新说明') >= 0){ found = true; txt = cards[i].textContent; break; }
+        if (cards[i].textContent.indexOf('v' + APP_VERSION + ' 更新说明') >= 0){ found = true; txt = cards[i].textContent; break; }
       }
-      log('  ' + (found ? '✅ 找到「v1.2 更新说明」' : '❌ 未找到'));
+      log('  ' + (found ? '✅ 找到「v' + APP_VERSION + ' 更新说明」' : '❌ 未找到 v' + APP_VERSION + ' 更新说明'));
       if (found){
-        log('  含「不再包含今日」: ' + (txt.indexOf('不再包含今日')>=0?'✅':'❌'));
-        log('  含「自动刷新卡死」: ' + (txt.indexOf('自动刷新卡死')>=0?'✅':'❌'));
+        log('  含「图线不前进」: ' + (txt.indexOf('图线不前进')>=0?'✅':'❌'));
         log('  长度: ' + txt.replace(/\\s+/g,' ').length + ' 字符');
       }
 

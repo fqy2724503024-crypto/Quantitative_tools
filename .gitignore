@@ -1,5 +1,8 @@
 # 开发/测试中间产物
 _dev/vr_*.html
+# 老脚本产出用 *_dom.html，新脚本（make_livepush 等）用 dom_ 前缀，两种都要排掉
+# 注意：.gitignore 不支持行尾注释，# 必须独占一行，否则整行会被当成 pattern
+_dev/dom_*.html
 _dev/*.png
 _dev/pg*/
 _dev/pc*/
